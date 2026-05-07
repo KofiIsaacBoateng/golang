@@ -16,7 +16,7 @@ func main() {
 	}
 
 	// connect to db;
-	client, _, err := db.Connect(cfg);
+	client, database, err := db.Connect(cfg);
 	if(err != nil) {
 		log.Fatalf("Connection to DB failed: %v", err);
 	}
@@ -29,7 +29,7 @@ func main() {
 	}()
 
 	// new router;
-	router := server.NewRouter();
+	router := server.NewRouter(database);
 
 	// run 
 	addr := fmt.Sprintf(":%s",cfg.ServerPort);
