@@ -4,11 +4,10 @@ import (
 	"context"
 	"fmt"
 	"jwt-auth/internal/app"
+	serverRouter "jwt-auth/internal/server"
 	"log"
 	"net/http"
 	"time"
-
-	"github.com/gin-gonic/gin"
 )
 
 func main() {
@@ -29,19 +28,14 @@ func main() {
 		}
 	}()
 
-	r := gin.Default()
-
-	r.GET("/",  func (c *gin.Context){
-			c.JSON(http.StatusOK, gin.H{
-				"ok": "true",
-				"msg": "Hello jwt auth",
-			})})
+	// new server router
+	r := serverRouter.NewRouter(a);
 
 	// instantiate server
 	srv := &http.Server{
 		Addr: fmt.Sprintf(":%s",a.Config.PORT),
-		ReadHeaderTimeout: 5 * time.Second,
 		Handler: r,
+		ReadHeaderTimeout: 5 * time.Second,
 	}
 
 	// listen
