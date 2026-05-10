@@ -40,3 +40,28 @@ func CreateToken(jwtSecret string, userId string, role string) (string, error) {
 
 	return signed, nil;
 }
+
+func ParseToken(jwtSecret string, tokenString string) (Claims, error) {
+	var claims Claims;
+	parsed, err := jwt.ParseWithClaims(tokenString, &claims, func(t *jwt.Token) (interface{}, error) {
+		if t.Method.Alg() != jwt.SigningMethodHS256.Alg() {
+			return nil, fmt.Errorf("Unexpected algorithm method: %v", t.Header["alg"])
+		}
+
+		return []byte(jwtSecret), nil
+	}, jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}))
+
+	if err != nil {
+		return Claims{}, fmt.Errorf("Invalid token: %w", err);
+	}
+
+	if !parsed.Valid {
+		return Claims{}, fmt.Errorf("Invalid token!");
+	}
+
+	if claims.Subject == "" {
+		return Claims{}, fmt.Errorf("Invalid Unauthorised user!")
+	}
+
+	return claims, nil;
+}
