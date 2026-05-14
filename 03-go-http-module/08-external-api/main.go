@@ -21,7 +21,7 @@ func writeResponseJSON(w http.ResponseWriter, status int, data any) {
 }
 
 func fetchCatFact() (CatFactStruct, error) {
-url := "https://catfact.ninja/fact"
+	url := "https://catfact.ninja/fact"
 
 	res, err := http.Get(url);
 
