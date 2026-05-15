@@ -13,11 +13,11 @@ type Command struct {
 	Name string
 	Command string
 	Description string
-	Call func()
+	Call func(cfg *Config)
 }
 
 
-func Repl() {
+func Repl(cfg *Config) {
 	for {
 		scanner := bufio.NewScanner(os.Stdin);
 
@@ -34,6 +34,7 @@ func Repl() {
 			continue;
 		}
 
+
 		commands := getCommands();
 
 		command, ok := commands[input];
@@ -43,7 +44,7 @@ func Repl() {
 			continue;
 		}
 
-		command.Call();
+		command.Call(cfg);
 	}
 }
 
@@ -60,6 +61,19 @@ func getCommands() map[string]Command {
 			Command: "help",
 			Description: "Displays details about how to use pokedex",
 			Call: helpCall,
+		},
+		"map": {
+			Name: "Map",
+			Command: "map",
+			Description: "List the locations where pokemons can be found and caught",
+			Call: mapCall,
+		},
+
+		"mapr": {
+			Name: "Reverse Map",
+			Command: "mapr",
+			Description: "Reverse to previous pages listed by map.",
+			Call: maprCall,
 		},
 	}
 }
