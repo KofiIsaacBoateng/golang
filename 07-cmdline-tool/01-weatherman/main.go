@@ -43,7 +43,7 @@ type Weather struct {
 
 func main() {
 	q := "Accra";
-	if len(os.Args) >= 1 {
+	if len(os.Args) >= 2 {
 		q = strings.Join(os.Args[1:], "%20");
 	}
 	res, err := http.Get("http://api.weatherapi.com/v1/forecast.json?key=d94208522b5a47e4b99122520261905&q=" + q + "&days=1&aqi=no&alerts=no");
