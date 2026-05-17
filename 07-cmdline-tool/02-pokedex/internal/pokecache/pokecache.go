@@ -19,6 +19,7 @@ type CacheMap struct {
 func NewCache(interval time.Duration) Cache {
 	c := Cache{
 		cache: make(map[string]CacheMap),
+		mu: &sync.Mutex{},
 	}
 
 	go c.ReapLoop(interval)

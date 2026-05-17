@@ -13,7 +13,7 @@ type Command struct {
 	Name string
 	Command string
 	Description string
-	Call func(cfg *Config)
+	Call func(cfg *Config, args ...string)
 }
 
 
@@ -28,23 +28,23 @@ func Repl(cfg *Config) {
 
 		scanner.Scan()
 		input := strings.TrimSpace(scanner.Text());
+		words := strings.Fields(input)
 
 		// onPressEnter
-		if input == "" {
+		if len(words) == 0 {
 			continue;
 		}
 
 
 		commands := getCommands();
 
-		command, ok := commands[input];
+		command, ok := commands[words[0]];
 		if !ok {
 			// invalid input
 			fmt.Printf("command: %s is INVALID.\n", input)
 			continue;
 		}
-
-		command.Call(cfg);
+		command.Call(cfg, words[1:]...);
 	}
 }
 
@@ -74,6 +74,34 @@ func getCommands() map[string]Command {
 			Command: "mapr",
 			Description: "Reverse to previous pages listed by map.",
 			Call: maprCall,
+		},
+
+		"explore": {
+			Name: "Explore",
+			Command: "explore [location]",
+			Description: "Explore pokemons available at a location.",
+			Call: exploreCall,
+		},
+
+		"catch": {
+			Name: "Catch",
+			Command: "catch [pokemon]",
+			Description: "Catch pokemon and add to your collections.",
+			Call: catchCall,
+		},
+
+		"inspect": {
+			Name: "Inspect",
+			Command: "inspect [pokemon]",
+			Description: "View details about a pokemon in your collections.",
+			Call: inspectCall,
+		},
+
+		"pokedex": {
+			Name: "Pokedex",
+			Command: "pokedex",
+			Description: "List all pokemons in your collection. (that you've caught)",
+			Call: pokedexCall,
 		},
 	}
 }

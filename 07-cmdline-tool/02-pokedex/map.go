@@ -2,15 +2,14 @@ package main
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/fatih/color"
 )
 
-func mapCall(cfg *Config) {
+func mapCall(cfg *Config, args ...string) {
 	locationAreas, err := cfg.PokeApiClient.LocationAreas(cfg.NextLocationUrl)
 	if err != nil {
-		log.Fatalf("Location areas: %v", err)
+		fmt.Printf("Location areas: %v", err)
 	}
 
 	boldCyan := color.New(color.FgCyan, color.Bold, color.Underline);
@@ -25,7 +24,7 @@ func mapCall(cfg *Config) {
 	cfg.PrevLocationUrl = locationAreas.Previous;
 }
 
-func maprCall(cfg *Config) {
+func maprCall(cfg *Config, args ...string) {
 	url := cfg.PrevLocationUrl;
 	if url == nil {
 		fmt.Println("No need to look back... There is nothing there to find!")
@@ -33,7 +32,7 @@ func maprCall(cfg *Config) {
 	}
 	locationAreas, err := cfg.PokeApiClient.LocationAreas(url);
 	if err != nil {
-		log.Fatalf("Location areas: %v", err)
+		fmt.Printf("Location areas: %v", err)
 	}
 
 	boldCyan := color.New(color.FgCyan, color.Bold, color.Underline);

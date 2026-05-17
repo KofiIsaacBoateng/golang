@@ -29,7 +29,7 @@ func (client *Client) LocationAreas(uri *string) (LocationAreaResp, error) {
 	// checking cache
 	cache, ok := client.Cache.Get(url);
 	if ok {
-		fmt.Println("Cache Hit!")
+		// cache hit
 		var Results LocationAreaResp;
 		if err := json.Unmarshal(cache, &Results); err != nil {
 			return LocationAreaResp{}, err;
@@ -57,7 +57,7 @@ func (client *Client) LocationAreas(uri *string) (LocationAreaResp, error) {
 	if err != nil {
 		return LocationAreaResp{}, err;
 	}
-	fmt.Println("Cache Miss!")
+	// cache miss
 	client.Cache.Add(url, bodyBytes)
 
 	var Results LocationAreaResp;

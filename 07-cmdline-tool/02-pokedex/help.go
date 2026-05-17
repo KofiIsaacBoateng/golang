@@ -6,7 +6,7 @@ import (
 	"github.com/fatih/color"
 )
 
-func helpCall(cfg *Config) {
+func helpCall(cfg *Config, args ...string) {
 	color.Cyan("\nWELCOME TO POKEDEX HELP!")
 	fmt.Print("Here are your available commands.\n\n")
 

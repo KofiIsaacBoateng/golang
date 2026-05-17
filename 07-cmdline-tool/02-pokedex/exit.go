@@ -4,6 +4,6 @@ import (
 	"os"
 )
 
-func exitCall(cfg *Config) {
+func exitCall(cfg *Config, args ...string) {
 	os.Exit(0)
 }
