@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"distributed-fs/p2p"
 	"log"
+	"time"
 )
 
 func makeServer (listeningAddr string, nodes ...string) *FileServer {
@@ -35,8 +37,13 @@ func main() {
 	go func(){
 		log.Fatal(s1.Start())
 	}()
+	time.Sleep(1 * time.Second)
 
+	go s2.Start()
+	time.Sleep(1 * time.Second)
 
-	s2.Start()
+	data := bytes.NewReader([]byte("This is a test file data in store."))
+	s2.StoreData("keytodatainstore", data)
 
+	select{}
 }

@@ -1,8 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"distributed-fs/p2p"
+	"encoding/gob"
 	"fmt"
+	"io"
 	"log"
 	"sync"
 )
@@ -36,6 +39,44 @@ func NewFileServer(opts FileServerOpts) *FileServer {
 	}
 }
 
+type Payload struct {
+	Key string
+	Data []byte
+}
+
+
+func (s *FileServer) broadcast(p *Payload) error {
+	peers := []io.Writer{}
+
+	for _, peer := range s.peers {
+		peers = append(peers, peer)
+	}
+
+	mw := io.MultiWriter(peers...);
+
+
+	return gob.NewEncoder(mw).Encode(p)
+}
+
+func (s *FileServer) StoreData(key string, r io.Reader) error {
+	// 1. store this file to disk
+	buf := new(bytes.Buffer);
+	tee := io.TeeReader(r, buf);
+
+	if err := s.store.Write(key, tee); err != nil {
+		return err
+	}
+
+	// 2. Broadcast to all known peers on the network
+
+	p := &Payload{
+		Key: key,
+		Data: buf.Bytes(),
+	}
+
+	return s.broadcast(p)
+}
+
 func (s *FileServer) Stop() {
 	close(s.quitch);
 }
@@ -44,8 +85,9 @@ func (s *FileServer) OnPeer(peer p2p.Peer) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	fmt.Println("connected to peer network: ", peer.RemoteAddr())
 	s.peers[peer.RemoteAddr().String()] = peer
+
+	fmt.Println("connected to peer network: ", peer.RemoteAddr())
 
 	return nil
 }
@@ -56,10 +98,17 @@ func (s *FileServer) Loop() {
 		log.Println("Server closed by user quitch action!")
 		s.Transport.Close()
 	}()
+	
 	for {
 		select{
 		case msg :=  <- s.Transport.Consume():
-			fmt.Printf("Message received from peer: %+v\n", msg)
+			var p Payload
+			r := bytes.NewReader(msg.Payload)
+			decoder := gob.NewDecoder(r)
+			if err := decoder.Decode(&p); err != nil {
+				fmt.Println("Payload error: ", err)
+			}
+			fmt.Printf("Message received from peer: %+v\n", p)
 		case <- s.quitch:
 			return
 		}
@@ -69,12 +118,12 @@ func (s *FileServer) Loop() {
 
 func (s *FileServer) BootStrapNetwork() error {
 	for _, addr := range s.BootStrapNodes {
-		go func(){
+		go func(addr string) {
 			fmt.Println("Attempting to connect with remote peer: ", addr)
 			if err := s.Transport.Dial(addr); err != nil {
 				fmt.Printf("Dial error on addr: %s [%+v]\n", addr, err)
 			}
-		}()
+		}(addr)
 	}
 
 	return nil

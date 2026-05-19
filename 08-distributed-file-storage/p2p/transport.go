@@ -4,9 +4,8 @@ import "net"
 
 // interface that represents a remote network node
 type Peer interface {
-	Send([]byte) error 
-	RemoteAddr() net.Addr
-	Close() error
+	net.Conn
+	Send([]byte) error
 }
 
 
