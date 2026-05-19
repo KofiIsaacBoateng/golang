@@ -40,20 +40,35 @@ func (p *TCPPeer) Close() error {
 	return p.conn.Close()
 }
 
+// RemoteAddr implements the Peer interface and returns the 
+// address of the peer connection
+func (p *TCPPeer) RemoteAddr() net.Addr {
+	return p.conn.RemoteAddr()
+}
+
+func (p *TCPPeer) Send(bytes []byte) error {
+	_, err := p.conn.Write(bytes)
+	return err
+}
+
 
 func NewTCPTransport (opts TCPTransportOpts) *TCPTransport {
 	return &TCPTransport{
-			TCPTransportOpts: opts,
-			tcpch: make(chan RPC),
+		TCPTransportOpts: opts,
+		tcpch: make(chan RPC),
 	}
 }
 
 
+// Consume implements the transport interface
 func (t *TCPTransport) Consume() <-chan RPC {
 	return t.tcpch
 }
 
-
+// Close implements the transport interface
+func (t *TCPTransport) Close() error {
+	return t.listener.Close();
+}
 
 func (t *TCPTransport) ListenAndAccept() error {
 	var err error
@@ -67,6 +82,8 @@ func (t *TCPTransport) ListenAndAccept() error {
 	// start accept loop (accept any tcp connection coming over the specified addr)
 	go t.startAcceptLoop()
 
+	fmt.Printf("Server is listening on PORT: %s\n", t.ListenAddr);
+
 	return nil
 
 }
@@ -75,17 +92,30 @@ func (t *TCPTransport) ListenAndAccept() error {
 func (t *TCPTransport) startAcceptLoop() {
 	for {
 		conn, err := t.listener.Accept();
+		if errors.Is(err, net.ErrClosed) {
+			return
+		}
+
 		if err != nil {
 			fmt.Printf("TCP accept error: %v\n", err)
 		}
 
-		fmt.Printf("New incoming connection from %+v\n", conn.RemoteAddr())
-		go t.handleConn(conn)
+		go t.handleConn(conn, true)
 	}
 }
 
+func (t *TCPTransport) Dial(addr string) error {
+	conn, err := net.Dial("tcp", addr);
+	if(err != nil) {
+		return err
+	}
 
-func (t *TCPTransport) handleConn(conn net.Conn) {
+	go t.handleConn(conn, false)
+
+	return nil
+}
+
+func (t *TCPTransport) handleConn(conn net.Conn, outbound bool) {
 	var err error
 
 	defer func() {
@@ -94,7 +124,7 @@ func (t *TCPTransport) handleConn(conn net.Conn) {
 	}()
 
 
-	peer := NewTCPPeer(conn, true);
+	peer := NewTCPPeer(conn, outbound);
 
 	// shakehands
 	if err = t.ShakeHands(peer); err != nil {

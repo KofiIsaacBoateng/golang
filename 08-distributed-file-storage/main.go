@@ -2,33 +2,41 @@ package main
 
 import (
 	"distributed-fs/p2p"
-	"fmt"
+	"log"
 )
 
-func OnPeer (peer p2p.Peer) error {
-	return nil;
-}
-
-func main() {
+func makeServer (listeningAddr string, nodes ...string) *FileServer {
 	tcpOpts := p2p.TCPTransportOpts{
-		ListenAddr: ":5000",
+		ListenAddr: listeningAddr,
 		ShakeHands: p2p.NOPShakeHands,
 		Decoder: p2p.DefaultDecoder{},
-		OnPeer: OnPeer,
+		// OnPeer: OnPeer,
 	}
 	tcpTransport := p2p.NewTCPTransport(tcpOpts);
 
-	if err := tcpTransport.ListenAndAccept(); err != nil {
-		fmt.Println(err)
+	fileServerOpts := FileServerOpts{
+		StorageRoot: listeningAddr + "_store",
+		PathTransformerFunc: CASPathTransformFunc,
+		Transport: tcpTransport,
+		BootStrapNodes: nodes,
 	}
 
+	s := NewFileServer(fileServerOpts);
 
-	go func () {
-		for{
-			msg := <-tcpTransport.Consume();
-			fmt.Printf("Message received from peer: %+v\n", msg)
-		}
+	tcpTransport.OnPeer = s.OnPeer
+
+	return s
+}
+
+func main() {
+	s1 := makeServer(":3000");
+	s2 := makeServer(":4000", ":3000")
+
+	go func(){
+		log.Fatal(s1.Start())
 	}()
 
-	select {}
+
+	s2.Start()
+
 }
