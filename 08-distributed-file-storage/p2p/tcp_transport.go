@@ -1,6 +1,7 @@
 package p2p
 
 import (
+	"errors"
 	"fmt"
 	"net"
 )
@@ -111,7 +112,7 @@ func (t *TCPTransport) handleConn(conn net.Conn) {
 	for {
 		err = t.Decoder.Decode(conn, &rpc); 
 
-		if err == net.ErrClosed {
+		if errors.Is(err, net.ErrClosed){
 			return
 		}
 
