@@ -39,9 +39,9 @@ func main() {
 	}()
 	time.Sleep(1 * time.Second)
 
+
 	go s2.Start()
 	time.Sleep(1 * time.Second)
-
 	data := bytes.NewReader([]byte("This is a test file data in store."))
 	s2.StoreData("keytodatainstore", data)
 

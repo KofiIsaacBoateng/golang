@@ -61,36 +61,35 @@ func NewStore(opts StoreOpts) *Store {
 	}
 }
 
-func (s *Store) Write(key string, r io.Reader) error {
+func (s *Store) Write(key string, r io.Reader) (int64, error) {
 	return s.WriteStream(key, r)
 }
 
-func (s *Store) WriteStream(key string, r io.Reader) error {
+func (s *Store) WriteStream(key string, r io.Reader) (int64, error) {
 	pathkey := s.PathTransformerFunc(key);
 
 	filepath := pathkey.Filepath + "/" + pathkey.Filename
 
 	// create directory
 	if err := os.MkdirAll(pathkey.Filepath, os.ModePerm); err != nil {
-		return err;
+		return 0, err;
 	}
 
 
 	// create file
 	f, err := os.Create(filepath);
 	if(err != nil) {
-		return err
+		return 0, err
 	}
 
 	defer f.Close()
 
 	n, err := io.Copy(f, r);
 	if err!=nil {
-		return err
+		return 0, err
 	}
 
-	fmt.Printf("Wrote (%d)bytes to disk: @%s\n", n, filepath)
-	return nil
+	return n, nil
 }
 
 func (s *Store) Read (key string) (io.Reader, error) {

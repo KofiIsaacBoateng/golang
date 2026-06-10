@@ -3,12 +3,16 @@ package p2p
 import (
 	"errors"
 	"fmt"
+	"log"
 	"net"
+	"sync"
 )
 
 type TCPPeer struct {
 	net.Conn
 	outbound bool // connection coming from outside this server
+
+	Wg *sync.WaitGroup
 
 }
 
@@ -32,6 +36,7 @@ func NewTCPPeer (conn net.Conn, outbound bool) *TCPPeer {
 	return &TCPPeer{
 		Conn: conn,
 		outbound: outbound,
+		Wg: &sync.WaitGroup{},
 	}
 }
 
@@ -139,8 +144,12 @@ func (t *TCPTransport) handleConn(conn net.Conn, outbound bool) {
 			fmt.Printf("TCP Error: %v\n", err)
 			continue
 		}
-		rpc.From = conn.RemoteAddr()
+		rpc.From = conn.RemoteAddr().String()
 
+		peer.Wg.Add(1)
+		log.Println("waiting till stream is done!")
 		t.tcpch <- rpc
+		peer.Wg.Wait()
+		log.Println("Streaming done! Continuing read loop...")
 	}
 }
