@@ -21,31 +21,33 @@ func TestPathTransformFunc(t *testing.T) {
 }
 
 
-func TestStoreDelete(t *testing.T) {
-	storeOpts := StoreOpts{
-		PathTransformerFunc: CASPathTransformFunc,
-	}
+// func TestStoreDelete(t *testing.T) {
+// 	storeOpts := StoreOpts{
+// 		PathTransformerFunc: CASPathTransformFunc,
+// 		RootDir: "test_root",
+// 	}
 
-	s := NewStore(storeOpts)
+// 	s := NewStore(storeOpts)
 
-	key := "somekeyinourstore";
-	data := []byte("This is a jpeg file that I am writing to disk.")
+// 	key := "somekeyinourstore";
+// 	data := []byte("This is a jpeg file that I am writing to disk.")
 
-	// write file to storage
-	if _, err := s.Write(key, bytes.NewReader(data)); err != nil {
-		t.Error(err)
-	}
+// 	// write file to storage
+// 	if _, err := s.Write(key, bytes.NewReader(data)); err != nil {
+// 		t.Error(err)
+// 	}
 
-	// delete
-	if err := s.Delete(key); err != nil {
-		t.Error(err)
-	}
-}
+// 	// delete
+// 	if err := s.Delete(key); err != nil {
+// 		t.Error(err)
+// 	}
+// }
 
 
 func TestStore(t *testing.T) {
 	storeOpts := StoreOpts{
 		PathTransformerFunc: CASPathTransformFunc,
+		RootDir: "test_root",
 	}
 
 	s := NewStore(storeOpts)

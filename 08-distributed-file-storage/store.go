@@ -49,6 +49,7 @@ func DefaultPathTransformerFunc(key string) PathKey {
 
 type StoreOpts struct {
 	PathTransformerFunc PathTransformerFunc
+	RootDir string
 }
 
 type Store struct {
@@ -68,12 +69,15 @@ func (s *Store) Write(key string, r io.Reader) (int64, error) {
 func (s *Store) WriteStream(key string, r io.Reader) (int64, error) {
 	pathkey := s.PathTransformerFunc(key);
 
-	filepath := pathkey.Filepath + "/" + pathkey.Filename
+	fileDir := s.RootDir + "/" + pathkey.Filepath
+	filepath := fileDir + "/" + pathkey.Filename
 
 	// create directory
-	if err := os.MkdirAll(pathkey.Filepath, os.ModePerm); err != nil {
+	if err := os.MkdirAll(fileDir, os.ModePerm); err != nil {
 		return 0, err;
 	}
+
+
 
 
 	// create file
@@ -92,7 +96,7 @@ func (s *Store) WriteStream(key string, r io.Reader) (int64, error) {
 	return n, nil
 }
 
-func (s *Store) Read (key string) (io.Reader, error) {
+func (s *Store) Read(key string) (io.Reader, error) {
 	f, err := s.ReadStream(key);
 	if err != nil {
 		return nil, err
@@ -115,7 +119,7 @@ func (s *Store) Read (key string) (io.Reader, error) {
 func (s *Store) ReadStream(key string) (io.ReadCloser, error) {
 	pathkey := s.PathTransformerFunc(key)
 
-	filepath := pathkey.Filepath + "/" + pathkey.Filename;
+	filepath := s.RootDir + "/" + pathkey.Filepath + "/" + pathkey.Filename;
 	return os.Open(filepath)
 }
 
@@ -123,7 +127,7 @@ func (s *Store) ReadStream(key string) (io.ReadCloser, error) {
 func (s *Store) Has(key string) bool {
 	pathkey := s.PathTransformerFunc(key)
 
-	filepath := pathkey.Filepath + "/" + pathkey.Filename;
+	filepath := s.RootDir + "/" + pathkey.Filepath + "/" + pathkey.Filename;
 	_, err := os.Stat(filepath);
 
 	return !errors.Is(err, os.ErrNotExist)
@@ -133,11 +137,12 @@ func (s *Store) Has(key string) bool {
 func (s *Store) Delete(key string) error {
 	pathkey := s.PathTransformerFunc(key);
 
+	fmt.Println(pathkey.RootDir())
 	if err := os.RemoveAll(pathkey.RootDir()); err != nil {
 		return err
 	}
 
 	fmt.Printf("deleted [%s] from disk", pathkey.Filename)
 
-	return os.RemoveAll(pathkey.RootDir())
+	return os.RemoveAll(s.RootDir + "/" + pathkey.RootDir())
 }

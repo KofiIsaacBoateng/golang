@@ -1,15 +1,16 @@
 package main
 
 import (
-	"bytes"
+	// "bytes"
 	"distributed-fs/p2p"
+	"io"
 	"log"
 	"time"
 )
 
-func makeServer (listeningAddr string, nodes ...string) *FileServer {
+func makeServer (listenAddr string, nodes ...string) *FileServer {
 	tcpOpts := p2p.TCPTransportOpts{
-		ListenAddr: listeningAddr,
+		ListenAddr: listenAddr,
 		ShakeHands: p2p.NOPShakeHands,
 		Decoder: p2p.DefaultDecoder{},
 		// OnPeer: OnPeer,
@@ -17,7 +18,7 @@ func makeServer (listeningAddr string, nodes ...string) *FileServer {
 	tcpTransport := p2p.NewTCPTransport(tcpOpts);
 
 	fileServerOpts := FileServerOpts{
-		StorageRoot: listeningAddr + "_store",
+		StorageRoot: listenAddr[1:] + "_store",
 		PathTransformerFunc: CASPathTransformFunc,
 		Transport: tcpTransport,
 		BootStrapNodes: nodes,
@@ -42,8 +43,23 @@ func main() {
 
 	go s2.Start()
 	time.Sleep(1 * time.Second)
-	data := bytes.NewReader([]byte("This is a test file data in store."))
-	s2.StoreData("keytodatainstore", data)
+	// data := bytes.NewReader([]byte("This is a test file data in store."))
+	// s2.Store("keytodatainstore", data)
+
+	key1 := "keytodatainstore"
+	// key2 := "doesn't exist"
+	r, err := s2.Get(key1);
+	if err != nil {
+		log.Fatal(err)
+		
+	}
+
+	b, err := io.ReadAll(r);
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	log.Printf("Read these bytes: %s\n", string(b))
 
 	select{}
 }
