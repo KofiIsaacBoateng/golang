@@ -77,6 +77,7 @@ func (s *FileServer) broadcast(msg *Message) error {
 	}
 
 	for _ , peer := range(s.peers) {
+		peer.Send([]byte(string(p2p.IncomingMessage)))
 		if err := peer.Send(buf.Bytes()); err != nil {
 			return err
 		}
@@ -118,7 +119,7 @@ func (s *FileServer) Get(key string) (io.Reader, error) {
 
 	select {}
 
-	return nil, nil
+	// return nil, nil
 }
 
 
@@ -146,11 +147,12 @@ func (s *FileServer) Store(key string, r io.Reader) error {
 		return err
 	}
 
-	time.Sleep(time.Second * 2)
+	time.Sleep(5 * time.Millisecond)
 
 
 	// TODO: multiwriter here to peers
 	for _, peer := range(s.peers) {
+		peer.Send([]byte(string(p2p.IncomingStream)))
 		_, err := io.Copy(peer, fileBuf);
 		if err != nil {
 			return err
@@ -190,6 +192,7 @@ func (s *FileServer) MessageLoop() {
 				fmt.Println("Decode error(consume): ", err)
 				continue
 			}
+			fmt.Println(msg)
 
 			if err := s.handleMessage(rpc.From, &msg); err != nil {
 				log.Println("Handle message error: ", err)
@@ -255,7 +258,7 @@ func (s *FileServer) handleStoreFileMessage(from string, msg StoreFileMessage) e
 	}
 	log.Printf("Written (%d)bytes to disk\n", n)
 
-	peer.(*p2p.TCPPeer).Wg.Done();
+	peer.CloseStream()
 
 	return nil
 }

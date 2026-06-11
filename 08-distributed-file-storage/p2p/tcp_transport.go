@@ -12,7 +12,7 @@ type TCPPeer struct {
 	net.Conn
 	outbound bool // connection coming from outside this server
 
-	Wg *sync.WaitGroup
+	wg *sync.WaitGroup
 
 }
 
@@ -36,7 +36,7 @@ func NewTCPPeer (conn net.Conn, outbound bool) *TCPPeer {
 	return &TCPPeer{
 		Conn: conn,
 		outbound: outbound,
-		Wg: &sync.WaitGroup{},
+		wg: &sync.WaitGroup{},
 	}
 }
 
@@ -45,11 +45,15 @@ func (p *TCPPeer) Send(bytes []byte) error {
 	return err
 }
 
+func (p *TCPPeer) CloseStream() {
+	p.wg.Done();
+}
+
 
 func NewTCPTransport (opts TCPTransportOpts) *TCPTransport {
 	return &TCPTransport{
 		TCPTransportOpts: opts,
-		tcpch: make(chan RPC),
+		tcpch: make(chan RPC, 1024),
 	}
 }
 
@@ -64,6 +68,7 @@ func (t *TCPTransport) Close() error {
 	return t.listener.Close();
 }
 
+// implements the transport interface
 func (t *TCPTransport) ListenAndAccept() error {
 	var err error
 
@@ -98,6 +103,7 @@ func (t *TCPTransport) startAcceptLoop() {
 	}
 }
 
+// implements the transport interface
 func (t *TCPTransport) Dial(addr string) error {
 	conn, err := net.Dial("tcp", addr);
 	if(err != nil) {
@@ -132,8 +138,8 @@ func (t *TCPTransport) handleConn(conn net.Conn, outbound bool) {
 	}
 
 	// read loop
-	var rpc RPC
 	for {
+		var rpc RPC
 		err = t.Decoder.Decode(conn, &rpc); 
 
 		if errors.Is(err, net.ErrClosed){
@@ -144,12 +150,16 @@ func (t *TCPTransport) handleConn(conn net.Conn, outbound bool) {
 			fmt.Printf("TCP Error: %v\n", err)
 			continue
 		}
-		rpc.From = conn.RemoteAddr().String()
 
-		peer.Wg.Add(1)
-		log.Println("waiting till stream is done!")
+		rpc.From = conn.RemoteAddr().String()
+		if(rpc.Stream){
+			peer.wg.Add(1)
+			log.Println("waiting till stream is done!")
+			peer.wg.Wait()
+			log.Println("Streaming done! Continuing read loop...")
+			continue
+		}
+		
 		t.tcpch <- rpc
-		peer.Wg.Wait()
-		log.Println("Streaming done! Continuing read loop...")
 	}
 }
