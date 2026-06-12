@@ -1,11 +1,8 @@
 package main
 
 import (
-	"bytes"
 	"distributed-fs/p2p"
-	"fmt"
-
-	// "io"
+	"io"
 	"log"
 	"time"
 )
@@ -45,26 +42,24 @@ func main() {
 
 	go s2.Start()
 	time.Sleep(1 * time.Second)
-	for i := range 10 {
-		data := bytes.NewReader([]byte("This is a test file data in store."))
-		s2.Store(fmt.Sprintf("keytodatainstore-%d", i), data)
-		time.Sleep(5 * time.Millisecond)
+	// for i := range 10 {
+		// data := bytes.NewReader([]byte("This is a cool picture in png."))
+		// s2.Store("coolPicture.png", data)
+		// time.Sleep(5 * time.Millisecond)
+	// }
+
+	key := "coolPicture.png"
+	r, err := s2.Get(key);
+	if err != nil {
+		log.Fatal(err)
+		
 	}
 
-	// key1 := "keytodatainstore"
-	// // key2 := "doesn't exist"
-	// r, err := s2.Get(key1);
-	// if err != nil {
-	// 	log.Fatal(err)
-		
-	// }
+	b, err := io.ReadAll(r);
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	// b, err := io.ReadAll(r);
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
+	log.Printf("Read these bytes: %s\n", string(b))
 
-	// log.Printf("Read these bytes: %s\n", string(b))
-
-	select{}
 }

@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"distributed-fs/p2p"
+	"encoding/binary"
 	"encoding/gob"
 	"fmt"
 	"io"
@@ -77,7 +78,7 @@ func (s *FileServer) broadcast(msg *Message) error {
 	}
 
 	for _ , peer := range(s.peers) {
-		peer.Send([]byte(string(p2p.IncomingMessage)))
+		peer.Send([]byte{p2p.IncomingMessage})
 		if err := peer.Send(buf.Bytes()); err != nil {
 			return err
 		}
@@ -90,11 +91,14 @@ func (s *FileServer) broadcast(msg *Message) error {
 
 func (s *FileServer) Get(key string) (io.Reader, error) {
 	if s.store.Has(key) {
-		return s.store.Read(key)
+		log.Printf("[%s]: Serving file [%s] from local disk...\n", s.Transport.Addr(), key)
+		_, r, err := s.store.Read(key)
+
+		return r, err
 	}
 
 
-	fmt.Printf("File of key path [%s] not found locally, fetching from network...\n", key)
+	log.Printf("[%s]: File of key path [%s] not found locally, fetching from network...\n", s.Transport.Addr(), key)
 
 	msg := Message{
 		Payload: GetFileMessage{
@@ -106,20 +110,24 @@ func (s *FileServer) Get(key string) (io.Reader, error) {
 		return nil, err
 	}
 
+	time.Sleep(500 * time.Millisecond)
+
 
 	for _, peer := range s.peers {
-		fileBuf := new(bytes.Buffer)
-		n, err := io.Copy(fileBuf, peer);
+		var fileSize int64;
+		binary.Read(peer, binary.LittleEndian, &fileSize)
+		n, err := s.store.Write(key, io.LimitReader(peer, fileSize));
 		if err != nil {
 			return nil, err
 		}
-
-		fmt.Println("Received bytes over the network: ", n)
+		
+		log.Printf("[%s]: Received (%d) bytes over the network from %s: \n", s.Transport.Addr(), n, peer.RemoteAddr())
+		peer.CloseStream()
 	}
 
-	select {}
+	_, r, err := s.store.Read(key)
 
-	// return nil, nil
+	return r, err
 }
 
 
@@ -152,7 +160,7 @@ func (s *FileServer) Store(key string, r io.Reader) error {
 
 	// TODO: multiwriter here to peers
 	for _, peer := range(s.peers) {
-		peer.Send([]byte(string(p2p.IncomingStream)))
+		peer.Send([]byte{p2p.IncomingStream})
 		_, err := io.Copy(peer, fileBuf);
 		if err != nil {
 			return err
@@ -219,14 +227,19 @@ func (s *FileServer) handleMessage(from string, msg *Message) error {
 
 func (s *FileServer) handleGetFileMessage(from string, msg GetFileMessage) error {
 	if !s.store.Has(msg.Key) {
-		return fmt.Errorf("Need to serve file of key path [%s], but it was not found on disk!", msg.Key)
+		return fmt.Errorf("[%s]: Need to serve file of key path [%s], but it was not found on disk!\n",s.Transport.Addr(), msg.Key)
 	}
 
-	log.Println("Serving file over the wire")
+	log.Printf("[%s]: Serving file over the wire\n", s.Transport.Addr())
 
-	r, err := s.store.Read(msg.Key); 
+	size, r, err := s.store.Read(msg.Key); 
 	if err != nil {
 		return err
+	}
+
+	if rc, ok := r.(io.ReadCloser); ok {
+		log.Println("Closing reader!")
+		defer rc.Close();
 	}
 
 	peer, ok := s.peers[from];
@@ -234,13 +247,16 @@ func (s *FileServer) handleGetFileMessage(from string, msg GetFileMessage) error
 		return fmt.Errorf("Peer not found!")
 	}
 
+	// First IncomingStream then file size then stream
+	peer.Send([]byte{p2p.IncomingStream})
+	var fileSize int64 = size
+	binary.Write(peer, binary.LittleEndian, fileSize);
 	n, err := io.Copy(peer, r);
 	if err != nil {
 		return err
 	}
 
-	log.Printf("Written [%d] bytes over wire!", n)
-
+	log.Printf("[%s]: Written (%d) bytes over wire to (%s)\n", s.Transport.Addr(), n, from)
 	return nil
 }
 

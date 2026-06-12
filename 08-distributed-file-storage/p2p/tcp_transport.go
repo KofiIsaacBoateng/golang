@@ -68,6 +68,10 @@ func (t *TCPTransport) Close() error {
 	return t.listener.Close();
 }
 
+func (t *TCPTransport) Addr() string {
+	return t.ListenAddr
+}
+
 // implements the transport interface
 func (t *TCPTransport) ListenAndAccept() error {
 	var err error

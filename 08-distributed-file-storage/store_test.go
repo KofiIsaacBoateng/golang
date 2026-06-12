@@ -66,7 +66,7 @@ func TestStore(t *testing.T) {
 	}
 
 	// read file
-	r, err := s.Read(key); 
+	_, r, err := s.Read(key); 
 	if err != nil {
 		t.Error(err)
 	}

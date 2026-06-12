@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"crypto/sha1"
 	"encoding/hex"
 	"errors"
@@ -96,31 +95,27 @@ func (s *Store) WriteStream(key string, r io.Reader) (int64, error) {
 	return n, nil
 }
 
-func (s *Store) Read(key string) (io.Reader, error) {
-	f, err := s.ReadStream(key);
-	if err != nil {
-		return nil, err
-	}
-
-	defer f.Close();
-
-	buf := new(bytes.Buffer);
-	_, err = io.Copy(buf, f);
-	if err != nil {
-		return nil, err
-	}
-
-	fmt.Printf("Read (%d)bytes: [%s]\n", len(buf.Bytes()), buf.String())
-
-	return buf, nil
+func (s *Store) Read(key string) (int64, io.Reader, error) {
+	return s.ReadStream(key);
+	
 }
 
 
-func (s *Store) ReadStream(key string) (io.ReadCloser, error) {
+func (s *Store) ReadStream(key string) (int64, io.ReadCloser, error) {
 	pathkey := s.PathTransformerFunc(key)
 
 	filepath := s.RootDir + "/" + pathkey.Filepath + "/" + pathkey.Filename;
-	return os.Open(filepath)
+	f, err := os.Open(filepath)
+	if err != nil {
+		return 0, nil, err
+	}
+
+	fs, err := os.Stat(filepath);
+	if err != nil {
+		return 0, nil, err
+	}
+
+	return fs.Size(), f, nil
 }
 
 
