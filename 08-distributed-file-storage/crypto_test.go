@@ -7,15 +7,26 @@ import (
 )
 
 func TestCopyEncrypt(t *testing.T) {
-	src := bytes.NewReader([]byte("foo not bar!"))
+	payload := []byte("foo not bar!")
+	src := bytes.NewReader(payload)
 	dest := new(bytes.Buffer)
 	key := newEncryptionKey();
 
-	_, err := copyEncrypt(key, src, dest)
-
-	if err != nil {
+	if _, err := copyEncrypt(key, src, dest); err != nil {
 		t.Error(err)
 	}
 
-	fmt.Println(dest.Bytes())
+	fmt.Println("Encrypt:", dest.String())
+
+	out := new(bytes.Buffer);
+	if _, err := copyDecrypt(key, dest, out); err != nil {
+		t.Error(err)
+	}
+
+	fmt.Println("Decrypt:", out.String())
+
+	if out.String() != string(payload) {
+		t.Error("Decryption failed!")
+	}
+
 }
