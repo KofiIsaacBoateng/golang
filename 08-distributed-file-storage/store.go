@@ -144,7 +144,7 @@ func (s *Store) Has(key string) bool {
 func (s *Store) Delete(key string) error {
 	pathkey := s.PathTransformerFunc(key);
 
-	if err := os.RemoveAll(pathkey.RootDir()); err != nil {
+	if err := os.RemoveAll(s.RootDir + "/" + pathkey.RootDir()); err != nil {
 		return err
 	}
 

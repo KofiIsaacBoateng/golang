@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"log"
 
 	"testing"
 
@@ -71,9 +72,15 @@ func TestStore(t *testing.T) {
 		t.Error(err)
 	}
 
+
 	bytes, err := io.ReadAll(r)
 	if  err != nil {
 		t.Error(err)
+	}
+
+	if rc, ok := r.(io.ReadCloser); ok {
+		log.Println("Closing reader!")
+		rc.Close();
 	}
 	
 	assert.Equal(t, string(bytes), string(data), fmt.Sprintf("[EXPECTED]: %s [GOT] %s", string(data), string(bytes)))
