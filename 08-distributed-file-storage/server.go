@@ -13,6 +13,7 @@ import (
 )
 
 type FileServerOpts struct {
+	EncKey []byte
 	StorageRoot   string
 	Transport     p2p.Transport
 	PathTransformerFunc PathTransformerFunc
@@ -116,7 +117,7 @@ func (s *FileServer) Get(key string) (io.Reader, error) {
 	for _, peer := range s.peers {
 		var fileSize int64;
 		binary.Read(peer, binary.LittleEndian, &fileSize)
-		n, err := s.store.Write(key, io.LimitReader(peer, fileSize));
+		n, err := s.store.WriteDecrypt(s.EncKey, key, io.LimitReader(peer, fileSize));
 		if err != nil {
 			return nil, err
 		}
@@ -142,30 +143,34 @@ func (s *FileServer) Store(key string, r io.Reader) error {
 		return err
 	}
 
-	log.Printf("Received and Saved (%d)bytes to disk\n", n)
-
+	
 	msg := Message{
 		Payload: StoreFileMessage{
 			Key: key,
-			Size: n,
+			Size: n + 16,
 		},
 	}
-
+	
 	if err := s.broadcast(&msg); err != nil {
 		return err
 	}
-
+	
 	time.Sleep(5 * time.Millisecond)
-
-
+	
+	
 	// TODO: multiwriter here to peers
-	for _, peer := range(s.peers) {
-		peer.Send([]byte{p2p.IncomingStream})
-		_, err := io.Copy(peer, fileBuf);
-		if err != nil {
-			return err
-		}
+	peers := []io.Writer{}
+	for _, peer := range s.peers {
+		peers = append(peers, peer)
 	}
+
+	mw := io.MultiWriter(peers...);
+	mw.Write([]byte{p2p.IncomingStream})	
+	nw, err := copyEncrypt(s.EncKey, fileBuf, mw)
+	if err != nil {
+		return err
+	}
+	log.Printf("[%s] Wrote (%d)bytes to the wire\n", s.Transport.Addr(), nw)
 
 	return nil
 }
@@ -200,7 +205,6 @@ func (s *FileServer) MessageLoop() {
 				fmt.Println("Decode error(consume): ", err)
 				continue
 			}
-			fmt.Println(msg)
 
 			if err := s.handleMessage(rpc.From, &msg); err != nil {
 				log.Println("Handle message error: ", err)
@@ -272,7 +276,7 @@ func (s *FileServer) handleStoreFileMessage(from string, msg StoreFileMessage) e
 	if err != nil {
 		return err
 	}
-	log.Printf("Written (%d)bytes to disk\n", n)
+	log.Printf("[%s] Received and Written (%d)bytes to disk\n",s.Transport.Addr(), n)
 
 	peer.CloseStream()
 
@@ -283,7 +287,7 @@ func (s *FileServer) handleStoreFileMessage(from string, msg StoreFileMessage) e
 func (s *FileServer) BootStrapNetwork() error {
 	for _, addr := range s.BootStrapNodes {
 		go func(addr string) {
-			fmt.Println("Attempting to connect with remote peer: ", addr)
+			fmt.Printf("[%s] Attempting to connect with remote peer [%s]\n", s.Transport.Addr(), addr)
 			if err := s.Transport.Dial(addr); err != nil {
 				fmt.Printf("Dial error on addr: %s [%+v]\n", addr, err)
 			}

@@ -65,7 +65,8 @@ func (s *Store) Write(key string, r io.Reader) (int64, error) {
 	return s.WriteStream(key, r)
 }
 
-func (s *Store) WriteStream(key string, r io.Reader) (int64, error) {
+
+func (s *Store) OpenFileForWrite(key string, r io.Reader) (*os.File, error) {
 	pathkey := s.PathTransformerFunc(key);
 
 	fileDir := s.RootDir + "/" + pathkey.Filepath
@@ -73,26 +74,37 @@ func (s *Store) WriteStream(key string, r io.Reader) (int64, error) {
 
 	// create directory
 	if err := os.MkdirAll(fileDir, os.ModePerm); err != nil {
-		return 0, err;
+		return nil, err;
 	}
 
-
-
-
 	// create file
-	f, err := os.Create(filepath);
+	return os.Create(filepath);
+}
+
+
+func (s *Store) WriteDecrypt(EncKey []byte, key string, r io.Reader) (int64, error) {
+	f, err := s.OpenFileForWrite(key, r);
+	if err != nil {
+		return 0, err
+	}
+
+	n, err := copyDecrypt(EncKey, r, f);
+	if err != nil {
+		return 0, err
+	}
+
+	return int64(n), nil
+}
+
+func (s *Store) WriteStream(key string, r io.Reader) (int64, error) {
+	f, err := s.OpenFileForWrite(key, r);
 	if(err != nil) {
 		return 0, err
 	}
 
 	defer f.Close()
 
-	n, err := io.Copy(f, r);
-	if err!=nil {
-		return 0, err
-	}
-
-	return n, nil
+	return io.Copy(f, r);
 }
 
 func (s *Store) Read(key string) (int64, io.Reader, error) {
@@ -132,7 +144,6 @@ func (s *Store) Has(key string) bool {
 func (s *Store) Delete(key string) error {
 	pathkey := s.PathTransformerFunc(key);
 
-	fmt.Println(pathkey.RootDir())
 	if err := os.RemoveAll(pathkey.RootDir()); err != nil {
 		return err
 	}

@@ -19,8 +19,13 @@ func TestCopyEncrypt(t *testing.T) {
 	fmt.Println("Encrypt:", dest.String())
 
 	out := new(bytes.Buffer);
-	if _, err := copyDecrypt(key, dest, out); err != nil {
+	n, err := copyDecrypt(key, dest, out); 
+	if err != nil {
 		t.Error(err)
+	}
+
+	if n != len(payload) + 16 {
+		t.Fail();
 	}
 
 	fmt.Println("Decrypt:", out.String())

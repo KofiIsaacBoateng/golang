@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"distributed-fs/p2p"
 	"io"
 	"log"
@@ -17,6 +18,7 @@ func makeServer (listenAddr string, nodes ...string) *FileServer {
 	tcpTransport := p2p.NewTCPTransport(tcpOpts);
 
 	fileServerOpts := FileServerOpts{
+		EncKey: newEncryptionKey(),
 		StorageRoot: listenAddr[1:] + "_store",
 		PathTransformerFunc: CASPathTransformFunc,
 		Transport: tcpTransport,
@@ -33,23 +35,25 @@ func makeServer (listenAddr string, nodes ...string) *FileServer {
 func main() {
 	s1 := makeServer(":3000");
 	s2 := makeServer(":4000", ":3000")
+	s3 := makeServer(":5000", ":4000", ":3000");
 
-	go func(){
-		log.Fatal(s1.Start())
-	}()
+	go s1.Start()
 	time.Sleep(1 * time.Second)
-
 
 	go s2.Start()
 	time.Sleep(1 * time.Second)
-	// for i := range 10 {
-		// data := bytes.NewReader([]byte("This is a cool picture in png."))
-		// s2.Store("coolPicture.png", data)
-		// time.Sleep(5 * time.Millisecond)
-	// }
+
+	go s3.Start()
+	time.Sleep(1 * time.Second)
 
 	key := "coolPicture.png"
-	r, err := s2.Get(key);
+	data := bytes.NewReader([]byte("This is a cool picture in png."))
+	s3.Store("coolPicture.png", data)
+
+	 if err := s3.store.Delete(key); err != nil { // delete file locally (just to test if we could fetch over the network)
+		log.Fatal(err)
+	}
+	r, err := s3.Get(key);
 	if err != nil {
 		log.Fatal(err)
 		

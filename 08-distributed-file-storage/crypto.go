@@ -25,7 +25,7 @@ func copyDecrypt(key []byte, src io.Reader, dest io.Writer) (int, error) {
 	// read first slice of the src [vi preppended to the encrypted file]
 	// it is same size as block.BlockSize()
 	iv := make([]byte, block.BlockSize())
-	nn, err := src.Read(iv);
+	_, err = src.Read(iv);
 	if err != nil {
 		return 0, err;
 	}
@@ -35,6 +35,7 @@ func copyDecrypt(key []byte, src io.Reader, dest io.Writer) (int, error) {
 	var (
 		buf = make([]byte, 32 * 1024) // size in memory at a streaming point
 		stream = cipher.NewCTR(block, iv)
+		nn = block.BlockSize();
 	)
 
 	// stream decryption (reverse encryption)
@@ -81,7 +82,7 @@ func copyEncrypt(key []byte, src io.Reader, dest io.Writer) (int, error) {
 
 	// preppend vi to the destination file
 	// because we will need vi to decrypt the file
-	nn, err := dest.Write(iv);
+	_, err = dest.Write(iv);
 	if err != nil {
 		return 0, err
 	}
@@ -91,6 +92,7 @@ func copyEncrypt(key []byte, src io.Reader, dest io.Writer) (int, error) {
 	var (
 		buf = make([]byte, 32 * 1024);
 		stream = cipher.NewCTR(block, iv)
+		nn = block.BlockSize()
 	)
 
 	for {
